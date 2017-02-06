@@ -1,0 +1,24 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>StateMachine Test</title>
+
+    <body>
+        <div id="tip" style="margin:auto;width:70%;line-height:5px">
+        </div>
+        <script>
+        var element=document.getElementById("tip");
+        console.log=function(...args){ 
+            var para=document.createElement("p");
+            var node=document.createTextNode(args.join(''));
+            para.appendChild(node);
+            element.appendChild(para);
+        };
+        </script>
+    </body>
+    <script src="../bin/sm/sm.js"></script>
+    <script src="test.js"></script>
+
+</html>
