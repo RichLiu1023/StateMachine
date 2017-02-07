@@ -23,5 +23,6 @@ gsm.register('force', 'none', 'forceStopping');
 gsm.initial = 'none';
 
 console.log('current state:', gsm.current);
+//触发状态转换
 gsm.emit(wait);
 ``` 
