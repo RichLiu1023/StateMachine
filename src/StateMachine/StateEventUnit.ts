@@ -11,6 +11,7 @@ module sm {
 		public event: string;
 		public froms: string[] = [];
 		public to: string;
+		public data: any;
 
 		public constructor() {
 		}

@@ -8,11 +8,12 @@ module sm {
 	 */
 	export interface IState {
 		stateName: string;
-		onEnter?: () => void;
+		stateMachine?: sm.StateMachine;
+		onEnter?: (data?: any) => void;
 		/**
 		 * 如果返回‘async’则会阻塞当前事件直到调用transition或cancelTransition
 		 */
-		onLeave?: () => void | string;
+		onLeave?: (data?: any) => void | string;
 		/**
 		 * 打断async状态时触发
 		 * transition或cancelTransition都会触发

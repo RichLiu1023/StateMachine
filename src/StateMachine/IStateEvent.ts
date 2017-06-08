@@ -7,8 +7,9 @@ module sm {
 	 * @description 事件接口
 	 */
 	export interface IStateEvent {
-		eventName:string;
-		onBefore():void;
-		onAfter():void;
+		eventName: string;
+		stateMachine?: sm.StateMachine;
+		onBefore(data?: any): void;
+		onAfter(data?: any): void;
 	}
 }

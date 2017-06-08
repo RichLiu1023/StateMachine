@@ -12,11 +12,14 @@ module sm {
 	 * @description 状态机数据
 	 */
 	export class StateMachineData {
-		private _stateEventUnit:sm.StateEventUnit[] = [];
-		private _states:any = {};
-		private _events:any = {};
+		private _stateEventUnit: sm.StateEventUnit[] = [];
+		private _states: any = {};
+		private _events: any = {};
+		public bindData: any;
+		private _stateMachine: sm.StateMachine;
 
-		public constructor() {
+		public constructor(stateMachine: sm.StateMachine) {
+			this._stateMachine = stateMachine;
 		}
 
 		public pushUnit( unit:sm.StateEventUnit ):void {
@@ -24,14 +27,20 @@ module sm {
 			!result && this._stateEventUnit.push( unit );
 		}
 
-		public pushState( state:sm.IState ):void {
-			var result = this.findStateByName( state.stateName );
-			!result && (this._states[ state.stateName ] = state);
+		public pushState(state: sm.IState): void {
+			var result = this.findStateByName(state.stateName);
+			if (!result) {
+				state.stateMachine = this._stateMachine;
+				this._states[state.stateName] = state;
+			}
 		}
 
-		public pushEvent( event:sm.IStateEvent ):void {
-			var result = this.findEventByName( event.eventName );
-			!result && (this._events[ event.eventName ] = event);
+		public pushEvent(event: sm.IStateEvent): void {
+			var result = this.findEventByName(event.eventName);
+			if (!result) {
+				event.stateMachine = this._stateMachine;
+				this._events[event.eventName] = event;
+			}
 		}
 
 		/**

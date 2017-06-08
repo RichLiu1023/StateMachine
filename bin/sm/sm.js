@@ -1,6 +1,6 @@
 var sm;
 (function (sm) {
-    sm.version = '1.0.3';
+    sm.version = '1.1.0';
 })(sm || (sm = {}));
 var sm;
 (function (sm) {
@@ -63,10 +63,11 @@ var sm;
 var sm;
 (function (sm) {
     var StateMachineData = (function () {
-        function StateMachineData() {
+        function StateMachineData(stateMachine) {
             this._stateEventUnit = [];
             this._states = {};
             this._events = {};
+            this._stateMachine = stateMachine;
         }
         StateMachineData.prototype.pushUnit = function (unit) {
             var result = this.findStateEventUnitByToName(unit.event, unit.to);
@@ -74,11 +75,17 @@ var sm;
         };
         StateMachineData.prototype.pushState = function (state) {
             var result = this.findStateByName(state.stateName);
-            !result && (this._states[state.stateName] = state);
+            if (!result) {
+                state.stateMachine = this._stateMachine;
+                this._states[state.stateName] = state;
+            }
         };
         StateMachineData.prototype.pushEvent = function (event) {
             var result = this.findEventByName(event.eventName);
-            !result && (this._events[event.eventName] = event);
+            if (!result) {
+                event.stateMachine = this._stateMachine;
+                this._events[event.eventName] = event;
+            }
         };
         StateMachineData.prototype.findStateEventUnitByToName = function (eventName, toName) {
             var len = this._stateEventUnit.length;
@@ -126,11 +133,22 @@ var sm;
             this.DEFAULT = 'none';
             this.ASYNC = 'async';
             this.initial = this.DEFAULT;
-            this._data = new sm.StateMachineData();
+            this._data = new sm.StateMachineData(this);
         }
         StateMachine.create = function () {
             return new sm.StateMachine();
         };
+        StateMachine.prototype.setBindData = function (data) {
+            this._data.bindData = data;
+            return this;
+        };
+        Object.defineProperty(StateMachine.prototype, "bindData", {
+            get: function () {
+                return this._data.bindData;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(StateMachine.prototype, "current", {
             get: function () {
                 return this._current || this.initial;
@@ -225,13 +243,16 @@ var sm;
             }
             return this;
         };
-        StateMachine.prototype.emit = function (eventName) {
+        StateMachine.prototype.emit = function (eventName, data) {
             if (this.transitionUnit) {
                 console.log(this.current, sm.ErrorCode.e8, sm.ErrorCode.e3, eventName);
                 return;
             }
             var unit = this._data.findStateEventUnitByFromName(eventName, this.current);
-            unit && this.execute(unit);
+            if (unit) {
+                unit.data = data;
+                this.execute(unit);
+            }
             !unit && console.log(sm.ErrorCode.e3, eventName);
         };
         StateMachine.prototype.can = function (eventName) {
@@ -246,8 +267,9 @@ var sm;
         StateMachine.prototype.transition = function () {
             if (this.transitionUnit) {
                 this.interrupter(this.current);
-                this.enter(this.transitionUnit.to);
-                this.after(this.transitionUnit.event);
+                this.enter(this.transitionUnit.to, this.transitionUnit.data);
+                this.after(this.transitionUnit.event, this.transitionUnit.data);
+                this.transitionUnit.data = null;
                 this._current = this.transitionUnit.to;
             }
             this.transitionUnit = null;
@@ -255,7 +277,8 @@ var sm;
         StateMachine.prototype.cancelTransition = function () {
             if (this.transitionUnit) {
                 this.interrupter(this.current);
-                this.after(this.transitionUnit.event);
+                this.after(this.transitionUnit.event, this.transitionUnit.data);
+                this.transitionUnit.data = null;
             }
             this.transitionUnit = null;
         };
@@ -263,22 +286,26 @@ var sm;
             return !!this.transitionUnit;
         };
         StateMachine.prototype.interrupt = function () {
-            this.cancelTransition();
+            if (this.isTransition())
+                this.cancelTransition();
+            else
+                this.interrupter(this.current);
             this._current = this.DEFAULT;
         };
         StateMachine.prototype.execute = function (unit) {
             var preState = this._data.findStateByName(this.current);
-            this.before(unit.event);
+            this.before(unit.event, unit.data);
             var result = true;
             if (preState && preState.onLeave) {
-                result = preState.onLeave();
+                result = preState.onLeave(unit.data);
             }
             if (result == this.ASYNC) {
                 this.transitionUnit = unit;
             }
             else {
-                this.enter(unit.to);
-                this.after(unit.event);
+                this.enter(unit.to, unit.data);
+                this.after(unit.event, unit.data);
+                unit.data = null;
                 this._current = unit.to;
             }
         };
@@ -286,17 +313,17 @@ var sm;
             var state = this._data.findStateByName(stateName);
             state && state.onInterrupt && state.onInterrupt();
         };
-        StateMachine.prototype.enter = function (stateName) {
+        StateMachine.prototype.enter = function (stateName, data) {
             var state = this._data.findStateByName(stateName);
-            state && state.onEnter && state.onEnter();
+            state && state.onEnter && state.onEnter(data);
         };
-        StateMachine.prototype.after = function (eventName) {
+        StateMachine.prototype.after = function (eventName, data) {
             var event = this._data.findEventByName(eventName);
-            event && event.onAfter && event.onAfter();
+            event && event.onAfter && event.onAfter(data);
         };
-        StateMachine.prototype.before = function (eventName) {
+        StateMachine.prototype.before = function (eventName, data) {
             var event = this._data.findEventByName(eventName);
-            event && event.onBefore && event.onBefore();
+            event && event.onBefore && event.onBefore(data);
         };
         return StateMachine;
     }());

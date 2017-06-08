@@ -26,11 +26,33 @@ module sm {
 		private transitionUnit: sm.StateEventUnit;
 
 		public constructor() {
-			this._data = new sm.StateMachineData();
+			this._data = new sm.StateMachineData(this);
 		}
 
 		public static create(): sm.StateMachine {
 			return new sm.StateMachine();
+		}
+
+
+		/**
+		 * 绑定数据
+		 * @param {*} data 
+		 * @returns {sm.StateMachine} 
+		 * @memberof StateMachine
+		 */
+		public setBindData(data: any): sm.StateMachine {
+			this._data.bindData = data;
+			return this;
+		}
+
+		/**
+		 * 获取绑定数据
+		 * @readonly
+		 * @type {*}
+		 * @memberof StateMachine
+		 */
+		get bindData(): any {
+			return this._data.bindData;
 		}
 
 		/**
@@ -158,16 +180,23 @@ module sm {
 		 * event.onBefore
 		 * from.onLeave 如果返回‘async’则会阻塞当前状态直到调用transition或cancelTransition
 		 * to.onEnter
-		 * event.onAfter
-		 * @param eventName 事件名
+		 * event.onAfter 
+		 * @param {string} eventName 
+		 * @param {*} [data] 
+		 * @returns {void} 
+		 * 
+		 * @memberof StateMachine
 		 */
-		public emit(eventName: string): void {
+		public emit(eventName: string, data?: any): void {
 			if (this.transitionUnit) {
 				console.log(this.current, sm.ErrorCode.e8, sm.ErrorCode.e3, eventName);
 				return;
 			}
 			var unit = this._data.findStateEventUnitByFromName(eventName, this.current);
-			unit && this.execute(unit);
+			if (unit) {
+				unit.data = data;
+				this.execute(unit);
+			}
 			!unit && console.log(sm.ErrorCode.e3, eventName);
 		}
 
@@ -200,8 +229,9 @@ module sm {
 		public transition(): void {
 			if (this.transitionUnit) {
 				this.interrupter(this.current);
-				this.enter(this.transitionUnit.to);
-				this.after(this.transitionUnit.event);
+				this.enter(this.transitionUnit.to, this.transitionUnit.data);
+				this.after(this.transitionUnit.event, this.transitionUnit.data);
+				this.transitionUnit.data = null;
 				this._current = this.transitionUnit.to;
 			}
 			this.transitionUnit = null;
@@ -215,7 +245,8 @@ module sm {
 		public cancelTransition(): void {
 			if (this.transitionUnit) {
 				this.interrupter(this.current);
-				this.after(this.transitionUnit.event);
+				this.after(this.transitionUnit.event, this.transitionUnit.data);
+				this.transitionUnit.data = null;
 			}
 			this.transitionUnit = null;
 		}
@@ -232,9 +263,11 @@ module sm {
 		 * 强制中断当前状态，并跳转到 none 状态
 		 * 1、当前处于 async 状态时会调用 cancelTransition
 		 * 2、不会调用当前状态的 onLeave
+		 * 3、会调用当前状态的 onInterrupt
 		 */
 		public interrupt(): void {
-			this.cancelTransition();
+			if (this.isTransition()) this.cancelTransition();
+			else this.interrupter(this.current);
 			this._current = this.DEFAULT;
 		}
 
@@ -248,17 +281,18 @@ module sm {
 		 */
 		private execute(unit: sm.StateEventUnit): void {
 			var preState = this._data.findStateByName(this.current);
-			this.before(unit.event);
+			this.before(unit.event, unit.data);
 			var result: any = true;
 			if (preState && preState.onLeave) {
-				result = preState.onLeave();
+				result = preState.onLeave(unit.data);
 			}
 			if (result == this.ASYNC) {
 				this.transitionUnit = unit;
 			}
 			else {
-				this.enter(unit.to);
-				this.after(unit.event);
+				this.enter(unit.to, unit.data);
+				this.after(unit.event, unit.data);
+				unit.data = null;
 				this._current = unit.to;
 			}
 		}
@@ -268,19 +302,19 @@ module sm {
 			state && state.onInterrupt && state.onInterrupt();
 		}
 
-		private enter(stateName: string): void {
+		private enter(stateName: string, data?: any): void {
 			var state = this._data.findStateByName(stateName);
-			state && state.onEnter && state.onEnter();
+			state && state.onEnter && state.onEnter(data);
 		}
 
-		private after(eventName: string): void {
+		private after(eventName: string, data?: any): void {
 			var event = this._data.findEventByName(eventName);
-			event && event.onAfter && event.onAfter();
+			event && event.onAfter && event.onAfter(data);
 		}
 
-		private before(eventName: string): void {
+		private before(eventName: string, data?: any): void {
 			var event = this._data.findEventByName(eventName);
-			event && event.onBefore && event.onBefore();
+			event && event.onBefore && event.onBefore(data);
 		}
 	}
 }

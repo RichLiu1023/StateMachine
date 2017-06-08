@@ -16,16 +16,18 @@ declare module sm {
 declare module sm {
     interface IState {
         stateName: string;
-        onEnter?: () => void;
-        onLeave?: () => void | string;
+        stateMachine?: sm.StateMachine;
+        onEnter?: (data?: any) => void;
+        onLeave?: (data?: any) => void | string;
         onInterrupt?: () => void;
     }
 }
 declare module sm {
     interface IStateEvent {
         eventName: string;
-        onBefore(): void;
-        onAfter(): void;
+        stateMachine?: sm.StateMachine;
+        onBefore(data?: any): void;
+        onAfter(data?: any): void;
     }
 }
 declare module sm {
@@ -33,6 +35,7 @@ declare module sm {
         event: string;
         froms: string[];
         to: string;
+        data: any;
         constructor();
         static register(event: string, from: Array<string> | string, to: string): sm.StateEventUnit;
         private addFroms(froms);
@@ -46,7 +49,9 @@ declare module sm {
         private _stateEventUnit;
         private _states;
         private _events;
-        constructor();
+        bindData: any;
+        private _stateMachine;
+        constructor(stateMachine: sm.StateMachine);
         pushUnit(unit: sm.StateEventUnit): void;
         pushState(state: sm.IState): void;
         pushEvent(event: sm.IStateEvent): void;
@@ -67,13 +72,15 @@ declare module sm {
         private transitionUnit;
         constructor();
         static create(): sm.StateMachine;
+        setBindData(data: any): sm.StateMachine;
+        bindData: any;
         current: string;
         register(event: string, from: Array<string> | string, to: string): void;
         registerStates(states: Array<sm.IState> | sm.IState): sm.StateMachine;
         private registerState(state);
         registerEvents(events: Array<sm.IStateEvent> | sm.IStateEvent): sm.StateMachine;
         private registerEvent(event);
-        emit(eventName: string): void;
+        emit(eventName: string, data?: any): void;
         can(eventName: string): boolean;
         is(stateName: string): boolean;
         transition(): void;
@@ -82,8 +89,8 @@ declare module sm {
         interrupt(): void;
         private execute(unit);
         private interrupter(stateName);
-        private enter(stateName);
-        private after(eventName);
-        private before(eventName);
+        private enter(stateName, data?);
+        private after(eventName, data?);
+        private before(eventName, data?);
     }
 }
