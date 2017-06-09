@@ -15,6 +15,7 @@ var sm;
         ErrorCode.e6 = '注册状态必须有stateName或事件必须有eventName属性';
         ErrorCode.e7 = '必须是函数';
         ErrorCode.e8 = '当前已阻塞，等待调用transition或cancelTransition';
+        ErrorCode.e9 = '当前处于执行状态';
         return ErrorCode;
     }());
     sm.ErrorCode = ErrorCode;
@@ -133,6 +134,7 @@ var sm;
             this.DEFAULT = 'none';
             this.ASYNC = 'async';
             this.initial = this.DEFAULT;
+            this.isCoding = false;
             this._data = new sm.StateMachineData(this);
         }
         StateMachine.create = function () {
@@ -245,7 +247,11 @@ var sm;
         };
         StateMachine.prototype.emit = function (eventName, data) {
             if (this.transitionUnit) {
-                console.log(this.current, sm.ErrorCode.e8, sm.ErrorCode.e3, eventName);
+                console.error(this.current, sm.ErrorCode.e8, sm.ErrorCode.e3, eventName);
+                return;
+            }
+            if (this.isCoding) {
+                console.error(this.current, sm.ErrorCode.e9, sm.ErrorCode.e3, eventName);
                 return;
             }
             var unit = this._data.findStateEventUnitByFromName(eventName, this.current);
@@ -253,10 +259,12 @@ var sm;
                 unit.data = data;
                 this.execute(unit);
             }
-            !unit && console.log(sm.ErrorCode.e3, eventName);
+            !unit && console.error(sm.ErrorCode.e3, eventName);
         };
         StateMachine.prototype.can = function (eventName) {
             if (this.transitionUnit)
+                return false;
+            if (this.isCoding)
                 return false;
             var unit = this._data.findStateEventUnitByFromName(eventName, this.current);
             return !!unit;
@@ -271,6 +279,7 @@ var sm;
                 this.after(this.transitionUnit.event, this.transitionUnit.data);
                 this.transitionUnit.data = null;
                 this._current = this.transitionUnit.to;
+                this.isCoding = false;
             }
             this.transitionUnit = null;
         };
@@ -279,6 +288,7 @@ var sm;
                 this.interrupter(this.current);
                 this.after(this.transitionUnit.event, this.transitionUnit.data);
                 this.transitionUnit.data = null;
+                this.isCoding = false;
             }
             this.transitionUnit = null;
         };
@@ -291,8 +301,10 @@ var sm;
             else
                 this.interrupter(this.current);
             this._current = this.DEFAULT;
+            this.isCoding = false;
         };
         StateMachine.prototype.execute = function (unit) {
+            this.isCoding = true;
             var preState = this._data.findStateByName(this.current);
             this.before(unit.event, unit.data);
             var result = true;
@@ -307,6 +319,7 @@ var sm;
                 this.after(unit.event, unit.data);
                 unit.data = null;
                 this._current = unit.to;
+                this.isCoding = false;
             }
         };
         StateMachine.prototype.interrupter = function (stateName) {

@@ -11,6 +11,7 @@ declare module sm {
         static e6: string;
         static e7: string;
         static e8: string;
+        static e9: string;
     }
 }
 declare module sm {
@@ -70,6 +71,7 @@ declare module sm {
         private _current;
         private _data;
         private transitionUnit;
+        private isCoding;
         constructor();
         static create(): sm.StateMachine;
         setBindData(data: any): sm.StateMachine;

@@ -15,5 +15,6 @@ module sm {
 		public static e6:string = '注册状态必须有stateName或事件必须有eventName属性';
 		public static e7:string = '必须是函数';
 		public static e8:string = '当前已阻塞，等待调用transition或cancelTransition';
+		public static e9:string = '当前处于执行状态';
 	}
 }

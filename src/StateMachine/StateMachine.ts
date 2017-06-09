@@ -24,6 +24,7 @@ module sm {
 		private _current: string;
 		private _data: sm.StateMachineData;
 		private transitionUnit: sm.StateEventUnit;
+		private isCoding: boolean = false;
 
 		public constructor() {
 			this._data = new sm.StateMachineData(this);
@@ -189,7 +190,11 @@ module sm {
 		 */
 		public emit(eventName: string, data?: any): void {
 			if (this.transitionUnit) {
-				console.log(this.current, sm.ErrorCode.e8, sm.ErrorCode.e3, eventName);
+				console.error(this.current, sm.ErrorCode.e8, sm.ErrorCode.e3, eventName);
+				return;
+			}
+			if (this.isCoding) {
+				console.error(this.current, sm.ErrorCode.e9, sm.ErrorCode.e3, eventName);
 				return;
 			}
 			var unit = this._data.findStateEventUnitByFromName(eventName, this.current);
@@ -197,7 +202,7 @@ module sm {
 				unit.data = data;
 				this.execute(unit);
 			}
-			!unit && console.log(sm.ErrorCode.e3, eventName);
+			!unit && console.error(sm.ErrorCode.e3, eventName);
 		}
 
 		/**
@@ -207,6 +212,7 @@ module sm {
 		 */
 		public can(eventName: string): boolean {
 			if (this.transitionUnit) return false;
+			if (this.isCoding) return false;
 			var unit = this._data.findStateEventUnitByFromName(eventName, this.current);
 			return !!unit;
 		}
@@ -233,6 +239,7 @@ module sm {
 				this.after(this.transitionUnit.event, this.transitionUnit.data);
 				this.transitionUnit.data = null;
 				this._current = this.transitionUnit.to;
+				this.isCoding = false;
 			}
 			this.transitionUnit = null;
 		}
@@ -247,6 +254,7 @@ module sm {
 				this.interrupter(this.current);
 				this.after(this.transitionUnit.event, this.transitionUnit.data);
 				this.transitionUnit.data = null;
+				this.isCoding = false;
 			}
 			this.transitionUnit = null;
 		}
@@ -269,6 +277,7 @@ module sm {
 			if (this.isTransition()) this.cancelTransition();
 			else this.interrupter(this.current);
 			this._current = this.DEFAULT;
+			this.isCoding = false;
 		}
 
 		/**
@@ -280,6 +289,7 @@ module sm {
 		 * event.onAfter
 		 */
 		private execute(unit: sm.StateEventUnit): void {
+			this.isCoding = true;
 			var preState = this._data.findStateByName(this.current);
 			this.before(unit.event, unit.data);
 			var result: any = true;
@@ -294,6 +304,7 @@ module sm {
 				this.after(unit.event, unit.data);
 				unit.data = null;
 				this._current = unit.to;
+				this.isCoding = false;
 			}
 		}
 
